@@ -1,208 +1,66 @@
-// cDictionary class v1.00:
+// cDictionary class v1.01:
 // Created by Erik Svensson and published on eriksven.com in February 2013
 // License: LGPLv3 - GNU LESSER GENERAL PUBLIC LICENSE Version 3 - http://www.gnu.org/licenses/lgpl.txt
 
-#IFNDEF NULL_ENTRY
-Global_Variable Variant NULL_ENTRY
-Move (Character(0)) to NULL_ENTRY
-#ENDIF
+Define cDICTIONARY_INCLUDED for 1
 
-Class cNode is an cObject
+Define Scripting.Dictionary for "{EE09B103-97E0-11CF-978F-00A02463E06F}"
+
+Class cDictionary is a DFComAutomationObject
     Procedure Construct_Object
         Forward Send Construct_Object
-        Property Variant pvValue
-        Property Handle[255] phaChildren
+        Set psProgID to Scripting.Dictionary
+        Set peAutoCreate to 1
     End_Procedure
-    
-    Function PutChild UChar cChild Returns Handle
-        Handle[] ha
-        Get phaChildren to ha
-        If (ha[cChild] = 0) Begin
-            Get Create U_cNode to ha[cChild]
-            Set phaChildren to ha            
-        End
-        Function_Return ha[cChild]
-    End_Function
-    
-    Function Child UChar cChild Returns Handle
-        Handle[] ha
-        Get phaChildren to ha
-        Function_Return ha[cChild]
-    End_Function
-    
-    Procedure FirstChild Char ByRef c Handle ByRef hNode
-        Handle[] ha
-        Integer i
-        Get phaChildren to ha
-        For i from 0 to (SizeOfArray(ha)-1)
-            If (ha[i] <> 0) Begin
-                Move i to c
-                Move ha[i] to hNode
-                Procedure_Return
-            End
-        Loop
-        Move 0 to hNode
-    End_Procedure
-    
-    Procedure Set Value Variant vValue
-        Set pvValue to vValue
-    End_Procedure
-    
-    Function Value Returns Variant
-        Function_Return (pvValue(Self))
-    End_Function
-    
-End_Class
 
-Class cDictionary is a cObject
-    
-    Procedure Construct_Object
-        Forward Send Construct_Object
-        Property Handle[255] phaData
-    End_Procedure
-    
-    { Visibility=Private }
-    Procedure _ToCharArray String ByRef s UChar[] ByRef ca
-        Address aStr
-        Move (ResizeArray(ca,Length(s))) to ca
-        Move (AddressOf(ca)) to aStr
-        Move s to aStr
-    End_Procedure
-    
-    { Visibility=Private }
-    Procedure _ToString UChar[] ByRef ca String ByRef s
-        Integer iSize iVoid
-        Move (SizeOfArray(ca)) to iSize
-        ZeroString iSize to s
-        Move (MemCopy(addressof(s),addressof(ca),iSize)) to iVoid
-    End_Procedure
-    
-    { Visibility=Private }
-    Procedure _CreateNodes UChar[] ByRef caKey Integer ByRef iLevel Handle ByRef hFoundNode
-        While (iLevel < SizeOfArray(caKey) and caKey[iLevel] <> 0)
-            Get PutChild of hFoundNode caKey[iLevel] to hFoundNode
-            Increment iLevel
-            Send _CreateNodes (&caKey) (&iLevel) (&hFoundNode)
-        Loop
-    End_Procedure
-    
-    { Visibility=Private }
-    Procedure _FindNode UChar[] ByRef caKey Integer ByRef iLevel Handle ByRef hFoundNode
-        While (iLevel < SizeOfArray(caKey) and caKey[iLevel] <> 0 and hFoundNode <> 0)
-            Get Child of hFoundNode caKey[iLevel] to hFoundNode
-            Increment iLevel
-            Send _FindNode (&caKey) (&iLevel) (&hFoundNode)
-        Loop
-    End_Procedure
-    
-    { Visibility=Private }
-    Procedure _GetKeys String[] ByRef saKeys UChar[] ByRef caKey Integer ByRef iLevel Handle[] ByRef haSiblings
-        Integer i
-        String s
-        
-        For i from 0 to (SizeOfArray(haSiblings)-1)
-
-            If (haSiblings[i] <> 0) Begin
-                Move i to caKey[iLevel]
-                If (pvValue(haSiblings[i]) <> NULL_ENTRY) Begin
-                    Send _ToString (&caKey) (&s)
-                    Move s to saKeys[SizeOfArray(saKeys)]
-                End
-                Increment iLevel
-                
-                Get phaChildren of haSiblings[i] to haSiblings
-                
-                Send _GetKeys (&saKeys) (&caKey) (&iLevel) (&haSiblings)
-            End
-            
-        Loop
-    End_Procedure
-    
     { Visibility=Public }
-    Function Value String sKey Returns String
-        UChar[] ca
-        Handle[] haData
-        Handle hFoundNode
-        Integer iLevel
-        Variant vValue
-        
-        Get phaData to haData
-        Send _ToCharArray (&sKey) (&ca)
- 
-        If (haData[ca[0]] = 0) Begin
-            Move True to FindErr
-            Move False to Found
-            Function_Return NULL_ENTRY
-        End
-        
-        Move 1 to iLevel
-        
-        Move haData[ca[0]] to hFoundNode
-        
-        Send _FindNode (&ca) (&iLevel) (&hFoundNode)
-        
-        If (hFoundNode = 0) Begin
-            Move True to FindErr
-            Move False to Found
-            Function_Return NULL_ENTRY
-        End
-        
-        Move False to FindErr
-        Move True to Found
-        
-        Get pvValue of hFoundNode to vValue
-        
-        Function_Return vValue
+    Function Is_cDictionary Returns Boolean
+        Function_Return True
     End_Function
     
-    { Visibility=Public }
-    Procedure Set Value String sKey Variant vValue
-        UChar[] ca
-        Handle[] haData
-        Handle hFoundNode
-        Integer iLevel
-        
-        Get phaData to haData
-        Send _ToCharArray (&sKey) (&ca)
-
-        If (haData[ca[0]] = 0) Begin
-            Get Create U_cNode to haData[ca[0]]
-            Set phaData to haData
-        End
-        
-        Move 1 to iLevel
-        
-        Move haData[ca[0]] to hFoundNode
-        
-        Send _CreateNodes (&ca) (&iLevel) (&hFoundNode)
-        
-        Set pvValue of hFoundNode to vValue
-        
+    Procedure Set Value Variant vKey Variant vValue
+        Handle hDispatchDriver
+        Get phDispatchDriver to hDispatchDriver
+        Send PrepareParams to hDispatchDriver 2
+        Send DefineParam to hDispatchDriver (|CI$4000 ior 12) vKey
+        Set ComProperty of hDispatchDriver 0 (|CI$4000 ior 12) to vValue
     End_Procedure
     
-    { Visibility=Public }
-    Function Keys Returns String[]
-        Handle[] haData haChildren
-        String[] saKeys
-        UChar[] caKey
-        Integer iLevel i
-        
-        Get phaData to haData
-        
-        For i from 0 to (SizeOfArray(haData)-1)
-            If (haData[i] <> 0) Begin
-                Move (ResizeArray(caKey,1,0)) to caKey
-                Move i to caKey[0]
-                If (pvValue(haData[i]) <> NULL_ENTRY) Begin
-                    Move (Character(i)) to saKeys[SizeOfArray(saKeys)]
-                End
-                Get phaChildren of haData[i] to haChildren
-                Move 1 to iLevel
-                Send _GetKeys (&saKeys) (&caKey) (&iLevel) (&haChildren)
-            End
-        Loop
-
-        Function_Return saKeys
+    Function Value Variant vKey Returns Variant
+        Handle hDispatchDriver
+        Variant retVal
+        Get phDispatchDriver to hDispatchDriver
+        Send PrepareParams to hDispatchDriver 1
+        Send DefineParam to hDispatchDriver (|CI$4000 ior 12) vKey
+        Get InvokeComMethod of hDispatchDriver 0 12 to retVal
+        Function_Return retVal
     End_Function
     
+    Function KeyExists Variant vKey Returns Boolean
+        Handle hDispatchDriver
+        Boolean retVal
+        Get phDispatchDriver to hDispatchDriver
+        Send PrepareParams to hDispatchDriver 1
+        Send DefineParam to hDispatchDriver (|CI$4000 ior 12) vKey
+        Get InvokeComMethod of hDispatchDriver 3 11 to retVal
+        Function_Return retVal
+    End_Function
+    
+    Procedure DeleteKey Variant vKey
+        Handle hDispatchDriver
+        Get phDispatchDriver to hDispatchDriver
+        Send PrepareParams to hDispatchDriver 1
+        Send DefineParam to hDispatchDriver (|CI$4000 ior 12) vKey
+        Send InvokeComMethod to hDispatchDriver 7 24
+    End_Procedure
+    
+    Function Keys Returns Variant[]
+        Variant[] va
+        Handle hDispatchDriver
+        Variant retVal
+        Get phDispatchDriver to hDispatchDriver
+        Get InvokeComMethod of hDispatchDriver 6 12 to retVal
+        Move retVal to va
+        Function_Return va
+    End_Function
 End_Class
